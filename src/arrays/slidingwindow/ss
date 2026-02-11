@@ -1,0 +1,275 @@
+import java.io.*;
+import java.util.*;
+
+public class AttendanceApp {
+
+    static final String STUDENT_FILE = "students.txt";
+    static final String ATT_FILE = "attendance.txt";
+
+    public static void main(String[] args) throws Exception {
+        Scanner sc = new Scanner(System.in);
+
+        while (true) {
+            System.out.println("\n1. Add Student");
+            System.out.println("2. Mark Attendance");
+            System.out.println("3. Show Attendance %");
+            System.out.println("4. Exit");
+            System.out.print("Choice: ");
+
+            int ch = sc.nextInt();
+
+            if (ch == 1) {
+                System.out.print("Roll: ");
+                String roll = sc.next();
+                System.out.print("Name: ");
+                String name = sc.next();
+                addStudent(roll, name);
+            }
+
+            else if (ch == 2) {
+                System.out.print("Date (YYYY-MM-DD): ");
+                String date = sc.next();
+                System.out.print("Roll: ");
+                String roll = sc.next();
+                System.out.print("Status (Present/Absent): ");
+                String status = sc.next();
+                markAttendance(date, roll, status);
+            }
+
+            else if (ch == 3) {
+                System.out.print("Roll: ");
+                String roll = sc.next();
+                showPercentage(roll);
+            }
+
+            else {
+                break;
+            }
+        }
+        sc.close();
+    }
+
+    // ================= FILE LOGIC =================
+
+    static void addStudent(String roll, String name) throws IOException {
+        FileWriter fw = new FileWriter(STUDENT_FILE, true);
+        fw.write(roll + "," + name + "\n");
+        fw.close();
+        System.out.println("Student added");
+    }
+
+    static void markAttendance(String date, String roll, String status) throws IOException {
+        FileWriter fw = new FileWriter(ATT_FILE, true);
+        fw.write(date + "," + roll + "," + status + "\n");
+        fw.close();
+        System.out.println("Attendance saved");
+    }
+
+    static void showPercentage(String roll) throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(ATT_FILE));
+        String line;
+        int total = 0, present = 0;
+
+        while ((line = br.readLine()) != null) {
+            String[] data = line.split(",");
+            if (data[1].equals(roll)) {
+                total++;
+                if (data[2].equalsIgnoreCase("Present"))
+                    present++;
+            }
+        }
+        br.close();
+
+        if (total == 0)
+            System.out.println("Attendance %: 0");
+        else
+            System.out.println("Attendance %: " + (present * 100 / total));
+    }
+}
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Student Attendance Management System</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+
+
+<h1>Student Attendance Management System</h1>
+
+
+<div class="container">
+<h2>Add Student</h2>
+<input type="text" id="name" placeholder="Student Name">
+<input type="text"  id="roll" placeholder="Roll Number">
+<button onclick="addStudent()">Add Student</button>
+
+
+<h2>Mark Attendance</h2>
+<input type="date" id="attDate">
+<button onclick="saveDayAttendance()">Save Attendance</button>
+
+
+<table>
+<thead>
+<tr>
+<th>Roll No</th>
+<th>Name</th>
+<th>Status</th>
+<th>Overall %</th>
+</tr>
+</thead>
+<tbody id="studentList"></tbody>
+</table>
+</div>
+
+
+<script src="script.js"></script>
+</body>
+</html>
+
+let students = JSON.parse(localStorage.getItem("students")) || [];
+let attendance = JSON.parse(localStorage.getItem("attendance")) || {};
+
+function saveData() {
+    localStorage.setItem("students", JSON.stringify(students));
+    localStorage.setItem("attendance", JSON.stringify(attendance));
+}
+
+// ADD STUDENT
+function addStudent() {
+    let roll = document.getElementById("roll").value.trim();
+    let name = document.getElementById("name").value.trim();
+
+    if (roll === "" || name === "") {
+        alert("Fill all fields");
+        return;
+    }
+
+    for (let s of students) {
+        if (s.roll === roll) {
+            alert("Roll already exists");
+            return;
+        }
+    }
+
+    students.push({ roll, name });
+    saveData();
+    displayStudents();
+
+    document.getElementById("roll").value = "";
+    document.getElementById("name").value = "";
+}
+
+// SHOW STUDENTS
+function displayStudents() {
+    let table = document.getElementById("studentList");
+    table.innerHTML = "";
+
+    students.forEach((s, i) => {
+        let percent = calculatePercentage(s.roll);
+
+        table.innerHTML += `
+            <tr>
+                <td>${s.roll}</td>
+                <td>${s.name}</td>
+                <td>
+                    <select id="status-${i}">
+                        <option value="Present">Present</option>
+                        <option value="Absent">Absent</option>
+                    </select>
+                </td>
+                <td>${percent}%</td>
+            </tr>
+        `;
+    });
+}
+
+// SAVE ATTENDANCE (DATE-WISE)
+function saveDayAttendance() {
+    let date = document.getElementById("attDate").value;
+    if (!date) {
+        alert("Select date");
+        return;
+    }
+
+    attendance[date] = {};
+
+    students.forEach((s, i) => {
+        let status = document.getElementById(`status-${i}`).value;
+        attendance[date][s.roll] = status;
+    });
+
+    saveData();
+    displayStudents();
+    alert("Attendance saved for " + date);
+}
+
+// CALCULATE %
+function calculatePercentage(roll) {
+    let total = 0, present = 0;
+
+    for (let date in attendance) {
+        if (attendance[date][roll]) {
+            total++;
+            if (attendance[date][roll] === "Present") present++;
+        }
+    }
+    return total === 0 ? 0 : Math.round((present / total) * 100);
+}
+
+window.onload = displayStudents;
+
+
+body {
+font-family: Arial, sans-serif;
+background: #f4f6f7;
+text-align: center;
+}
+
+
+h1 {
+background: #2c3e50;
+color: white;
+padding: 15px;
+}
+
+
+.container {
+width: 70%;
+margin: auto;
+background: white;
+padding: 20px;
+box-shadow: 0 0 10px gray;
+}
+
+
+input, button {
+padding: 10px;
+margin: 5px;
+}
+
+
+button {
+background: #27ae60;
+color: white;
+border: none;
+cursor: pointer;
+}
+
+
+table {
+width: 100%;
+margin-top: 20px;
+border-collapse: collapse;
+}
+
+
+th, td {
+border: 1px solid #ccc;
+padding: 10px;
+}
